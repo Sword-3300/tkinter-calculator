@@ -1,12 +1,14 @@
 import tkinter as tk
 from tkinter import ttk
+import re
 
 functions = {"clear":"C", "delete":"Del", "e":"e",
          "pi":"π", "openedbracket":"(", "closedbracket":")",
          "divide":"÷", "trig_menu":"Trig", "multiply":"×",
          "subtract":"-", "exp_menu":"Exp", "add":"+",
-         "plusminus":"+/-", "decimal":",", "equals":"=",
+         "plusminus":"+/-", "decimal":".", "equals":"=",
          "number":None}
+
 
 class Button:
     def __init__(self, function, row, col, CALCFUNC=None, rowspan=1, colspan=1, label=None):
@@ -27,11 +29,8 @@ class Button:
         btn = ttk.Button(text=self.text, command=self.register_press)
         btn.grid(row=self.row, column=self.col, rowspan=self.rowspan, columnspan=self.colspan, sticky="nsew")
 
-    def add_button_to_grid(self, grid:dict):
-        grid[(self.row, self.col)] = self
-
     def register_press(self):
-        self.CALCFUNC.send_to_CALCFUNC(self.function, self.label, calcGUI)
+        self.CALCFUNC.send_to_CALCFUNC(self.function, self.label)
 
 
 class CalculatorGUI(tk.Tk):
@@ -46,11 +45,10 @@ class CalculatorGUI(tk.Tk):
 
         self.setup_grid()
 
-        self.output_formatted:str = None
+        self.output_formatted = ""
         self.output_label = ttk.Label(text=self.output_formatted, font=("Arial", 20))
         self.output_label.grid(row=0, rowspan=2, columnspan=5, sticky="nsew")
 
-        self.button_grid = {}
         self.setup_buttons()
 
     def setup_grid(self):
@@ -89,7 +87,6 @@ class CalculatorGUI(tk.Tk):
         ]
         for button in buttons:
             button.draw_button()
-            button.add_button_to_grid(self.button_grid)
             button.CALCFUNC = self.CALCFUNC
 
     def update_output_label(self):
@@ -98,18 +95,44 @@ class CalculatorGUI(tk.Tk):
 
 class CalculatorFUNC:
     def __init__(self):
-        self.output_raw = ""
+        self.output_raw = []
+        self.output_eval = ""
+        self.CALCGUI = None
 
-    def raw_to_format(self, CALCGUI: CalculatorGUI):
-        CALCGUI.output_formatted = self.output_raw
+    def evaluate(self):
+        pass # SymPy stuff
 
-    def send_to_CALCFUNC(self, function, label, CALCGUI:CalculatorGUI):
+    def raw_to_formatted(self):
+        output = ""
+        for elem in self.output_raw:
+            if elem in range(0,10): # Is number?
+                output += str(elem)
+            else:
+                output += functions[elem]
+        return output
+
+    def send_to_CALCFUNC(self, function, label):
         if function == "number":
-            self.output_raw += str(label)
-            self.raw_to_format(CALCGUI)
-            CALCGUI.update_output_label()
+            self.output_raw.append(label) # Write number
+        elif function:
+            if function == "clear":
+                self.output_raw = [] # C button
+            elif function == "delete":
+                self.output_raw = self.output_raw[:-1] # Del button
+            elif function == "trig_menu":
+                pass # Open trig menu
+            elif function == "exp_menu":
+                pass # Open exp menu
+            else:
+                self.output_raw.append(function) # Other buttons
+
+        self.CALCGUI.output_formatted = self.raw_to_formatted()
+        self.CALCGUI.update_output_label()
+        print(self.output_raw) # DEBUG
+
 
 if __name__ == "__main__":
     calcFUNC = CalculatorFUNC()
     calcGUI = CalculatorGUI(calcFUNC)
+    calcFUNC.CALCGUI = calcGUI
     calcGUI.mainloop()
