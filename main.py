@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-import re
+import sympy as sp
 
 functions = {"clear":"C", "delete":"Del", "e":"e",
          "pi":"π", "openedbracket":"(", "closedbracket":")",
@@ -43,19 +43,18 @@ class CalculatorGUI(tk.Tk):
         self.title("Calculator")
         self.wm_iconphoto(False, tk.PhotoImage(file="icon.png"))
 
-        self.setup_grid()
-
-        self.output_formatted = ""
-        self.output_label = ttk.Label(text=self.output_formatted, font=("Arial", 20))
-        self.output_label.grid(row=0, rowspan=2, columnspan=5, sticky="nsew")
-
-        self.setup_buttons()
-
-    def setup_grid(self):
         for row in range(8):
             self.rowconfigure(row, weight=1)
         for column in range(5):
             self.columnconfigure(column, weight=1)
+
+        self.output_expression_label = ttk.Label(text="", font=("Arial", 20))
+        self.output_expression_label.grid(row=0, columnspan=5, sticky="nsew")
+
+        self.output_answer_label = ttk.Label(text="", font=("Arial", 20))
+        self.output_answer_label.grid(row=1, columnspan=5, sticky="nsew")
+
+        self.setup_buttons()
 
     def setup_buttons(self):
         buttons = [
@@ -89,22 +88,22 @@ class CalculatorGUI(tk.Tk):
             button.draw_button()
             button.CALCFUNC = self.CALCFUNC
 
-    def update_output_label(self):
-        self.output_label.configure(text=self.output_formatted)
+    def change_output_expression_label(self, text: str):
+        self.output_expression_label.configure(text=text)
+
+    def change_output_answer_label(self, text: str):
+        self.output_answer_label.configure(text=text)
 
 
 class CalculatorFUNC:
     def __init__(self):
-        self.output_raw = []
-        self.output_eval = ""
+        self.output_expression_raw = []
+        self.output_answer = ""
         self.CALCGUI = None
-
-    def evaluate(self):
-        pass # SymPy stuff
 
     def raw_to_formatted(self):
         output = ""
-        for elem in self.output_raw:
+        for elem in self.output_expression_raw:
             if elem in range(0,10): # Is number?
                 output += str(elem)
             else:
@@ -113,22 +112,72 @@ class CalculatorFUNC:
 
     def send_to_CALCFUNC(self, function, label):
         if function == "number":
-            self.output_raw.append(label) # Write number
+            self.output_expression_raw.append(label) # Write number
         elif function:
             if function == "clear":
-                self.output_raw = [] # C button
+                self.output_expression_raw = [] # C button
+                self.CALCGUI.change_output_answer_label("")
             elif function == "delete":
-                self.output_raw = self.output_raw[:-1] # Del button
+                self.output_expression_raw = self.output_expression_raw[:-1] # Del button
+                self.CALCGUI.change_output_answer_label("")
             elif function == "trig_menu":
                 pass # Open trig menu
             elif function == "exp_menu":
                 pass # Open exp menu
+            elif function == "equals":
+                self.output_answer = evaluate(self.output_expression_raw)
+                self.CALCGUI.change_output_answer_label(str(self.output_answer))
             else:
-                self.output_raw.append(function) # Other buttons
+                self.output_expression_raw.append(function) # Other buttons
 
-        self.CALCGUI.output_formatted = self.raw_to_formatted()
-        self.CALCGUI.update_output_label()
-        print(self.output_raw) # DEBUG
+        self.CALCGUI.change_output_expression_label(self.raw_to_formatted())
+        print(self.output_expression_raw) # DEBUG
+        print(self.output_answer) # DEBUG
+
+
+def format_evalf(num):
+    if abs(num) < 1: return num
+
+    s = str(num)
+
+    if "." in s:
+        int_pt, dec_pt = s.split(".")
+        if "00000" in dec_pt:
+            dec_pt = dec_pt.split("00000")[0]
+        return f"{int_pt}.{dec_pt}" if dec_pt else f"{int_pt}"
+    else:
+        return s
+
+
+def evaluate(expression_raw):
+    eval_expression = ""
+    for elem in expression_raw:
+        if isinstance(elem, int):
+            eval_expression += str(elem)
+        elif elem == "add":
+            eval_expression += "+"
+        elif elem == "subtract":
+            eval_expression += "-"
+        elif elem == "multiply":
+            eval_expression += "*"
+        elif elem == "divide":
+            eval_expression += "/"
+        elif elem == "openedbracket":
+            eval_expression += "("
+        elif elem == "closedbracket":
+            eval_expression += ")"
+        elif elem == "pi":
+            eval_expression += "pi"
+        elif elem == "e":
+            eval_expression += "E"
+        elif elem == "decimal":
+            eval_expression += "."
+
+    try:
+        result = format_evalf(sp.sympify(eval_expression).evalf())
+        return result
+    except:
+        return "Error"
 
 
 if __name__ == "__main__":
